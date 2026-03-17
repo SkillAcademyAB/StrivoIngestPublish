@@ -1,6 +1,7 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace StrivoIngestPublish;
@@ -12,20 +13,22 @@ namespace StrivoIngestPublish;
 /// </summary>
 public class CsvIngestFunction
 {
-    private const string BlobContainerName = "datasource";
-    private const string QueueName = "consumethis";
-
     private readonly BlobServiceClient _blobServiceClient;
     private readonly QueueServiceClient _queueServiceClient;
+    private readonly string _blobContainerName;
+    private readonly string _queueName;
     private readonly ILogger<CsvIngestFunction> _logger;
 
     public CsvIngestFunction(
         BlobServiceClient blobServiceClient,
         QueueServiceClient queueServiceClient,
+        IConfiguration configuration,
         ILogger<CsvIngestFunction> logger)
     {
         _blobServiceClient = blobServiceClient;
         _queueServiceClient = queueServiceClient;
+        _blobContainerName = configuration["BlobContainerName"] ?? "datasource";
+        _queueName = configuration["QueueName"] ?? "consumethis";
         _logger = logger;
     }
 
@@ -37,8 +40,8 @@ public class CsvIngestFunction
     {
         _logger.LogInformation("CsvIngestFunction triggered at {Time}", DateTime.UtcNow);
 
-        var containerClient = _blobServiceClient.GetBlobContainerClient(BlobContainerName);
-        var queueClient = _queueServiceClient.GetQueueClient(QueueName);
+        var containerClient = _blobServiceClient.GetBlobContainerClient(_blobContainerName);
+        var queueClient = _queueServiceClient.GetQueueClient(_queueName);
 
         await foreach (var blobItem in containerClient.GetBlobsAsync(cancellationToken: cancellationToken))
         {
