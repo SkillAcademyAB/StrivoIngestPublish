@@ -8,16 +8,23 @@ using Microsoft.Extensions.Hosting;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
-    .ConfigureServices(services =>
+    .ConfigureServices((context, services) =>
     {
+        var config = context.Configuration;
         var credential = new DefaultAzureCredential();
+
+        var blobServiceUri = new Uri(config["BlobServiceUri"]
+            ?? throw new InvalidOperationException("Missing required app setting: BlobServiceUri"));
+
+        var queueServiceUri = new Uri(config["QueueServiceUri"]
+            ?? throw new InvalidOperationException("Missing required app setting: QueueServiceUri"));
 
         services.AddAzureClients(builder =>
         {
-            builder.AddBlobServiceClient(new Uri("https://consumeddata.blob.core.windows.net"))
+            builder.AddBlobServiceClient(blobServiceUri)
                    .WithCredential(credential);
 
-            builder.AddQueueServiceClient(new Uri("https://consumeddata.queue.core.windows.net"))
+            builder.AddQueueServiceClient(queueServiceUri)
                    .WithCredential(credential)
                    .ConfigureOptions(options => options.MessageEncoding = QueueMessageEncoding.Base64);
         });
